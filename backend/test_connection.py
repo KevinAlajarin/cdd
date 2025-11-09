@@ -1,4 +1,4 @@
-from etl.database.mongodb_handler import MongoDBHandler
+from cdd.backend.etl.database.mongo_handler import MongoDBHandler
 from dotenv import load_dotenv
 
 load_dotenv()

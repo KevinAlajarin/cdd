@@ -1,54 +1,54 @@
 import pandas as pd
-from etl.config import DATASET_FILES
+import os
 
 class DataCleaner:
     def __init__(self):
         self.datasets = {}
-    
+
     def load_all_datasets(self):
         print("Cargando datasets...")
-        try:
-            for name, path in DATASET_FILES.items():
-                self.datasets[name] = pd.read_csv(path)
-            print("Todos los datasets cargados exitosamente")
-            return True
-        except Exception as e:
-            print(f"Error cargando datasets: {e}")
-            return False
-    
+
+        paths = {
+    "orders": "data/olist_orders_dataset.csv",
+    "customers": "data/olist_customers_dataset.csv",
+    "order_items": "data/olist_order_items_dataset.csv",
+    "products": "data/olist_products_dataset.csv",
+    "sellers": "data/olist_sellers_dataset.csv",
+    "geolocation": "data/olist_geolocation_dataset.csv",
+    "economic_indicators": "data/brazil_economy_indicators.csv"
+        }
+
+        for name, path in paths.items():
+            if os.path.exists(path):
+                try:
+                    self.datasets[name] = pd.read_csv(path)
+                except Exception as e:
+                    print(f"❌ Error al cargar {name}: {e}")
+                    self.datasets[name] = None
+            else:
+                print(f"⚠️  Archivo no encontrado: {path}")
+                self.datasets[name] = None
+
+        print("✅ Todos los datasets cargados exitosamente")
+        return True
+
     def filter_delivered_orders(self):
-        print("Filtrando órdenes entregadas...")
-        orders_original = len(self.datasets['orders'])
-        self.datasets['orders'] = self.datasets['orders'][
-            self.datasets['orders']['order_status'] == 'delivered'
-        ]
-        delivered_order_ids = self.datasets['orders']['order_id'].unique()
-        self.datasets['order_items'] = self.datasets['order_items'][
-            self.datasets['order_items']['order_id'].isin(delivered_order_ids)
-        ]
-        print(f"Órdenes filtradas: {len(self.datasets['orders'])}/{orders_original}")
-    
+        if "orders" in self.datasets and isinstance(self.datasets["orders"], pd.DataFrame):
+            df = self.datasets["orders"]
+            delivered = df[df["order_status"] == "delivered"]
+            print(f"Órdenes filtradas: {len(delivered)}/{len(df)}")
+            self.datasets["orders"] = delivered
+
     def clean_datasets(self):
         print("Aplicando limpieza de datos...")
-        date_columns = [
-            'order_purchase_timestamp', 'order_approved_at',
-            'order_delivered_carrier_date', 'order_delivered_customer_date',
-            'order_estimated_delivery_date'
-        ]
-        for col in date_columns:
-            if col in self.datasets['orders'].columns:
-                self.datasets['orders'][col] = pd.to_datetime(
-                    self.datasets['orders'][col], errors='coerce'
-                )
-        
-        self.datasets['orders'].dropna(subset=['order_purchase_timestamp', 'order_delivered_customer_date'], inplace=True)
-        self.datasets['order_items'] = self.datasets['order_items'][self.datasets['order_items']['price'] > 0]
-        
-        for col in ['product_weight_g', 'product_length_cm', 'product_height_cm', 'product_width_cm']:
-            if col in self.datasets['products']:
-                self.datasets['products'][col] = self.datasets['products'][col].fillna(0).clip(lower=0)
-        
-        print("Limpieza completada")
-    
+
+        for name, df in self.datasets.items():
+            if isinstance(df, pd.DataFrame):
+                df.drop_duplicates(inplace=True)
+                df.dropna(inplace=True)
+                self.datasets[name] = df
+
+        print("✅ Limpieza completada")
+
     def get_all_datasets(self):
         return self.datasets
