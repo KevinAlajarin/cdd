@@ -23,13 +23,13 @@ class DataCleaner:
                 try:
                     self.datasets[name] = pd.read_csv(path)
                 except Exception as e:
-                    print(f"❌ Error al cargar {name}: {e}")
+                    print(f"Error al cargar {name}: {e}")
                     self.datasets[name] = None
             else:
-                print(f"⚠️  Archivo no encontrado: {path}")
+                print(f" Archivo no encontrado: {path}")
                 self.datasets[name] = None
 
-        print("✅ Todos los datasets cargados exitosamente")
+        print("Todos los datasets cargados exitosamente")
         return True
 
     def filter_delivered_orders(self):
@@ -48,7 +48,7 @@ class DataCleaner:
                 df.dropna(inplace=True)
                 self.datasets[name] = df
 
-        print("✅ Limpieza completada")
+        print("Limpieza completada")
 
     def get_all_datasets(self):
         return self.datasets

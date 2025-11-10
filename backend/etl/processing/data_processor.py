@@ -1,6 +1,9 @@
+# etl/processing/data_processor.py
 import pandas as pd
+from datetime import datetime
 from .data_cleaner import DataCleaner
 from .metric_calculator import MetricCalculator
+from .warehouse_allocator import WarehouseAllocator
 
 class DataProcessor:
     """
@@ -23,26 +26,25 @@ class DataProcessor:
         """
         Ejecuta el pipeline ETL completo:
         - Carga datasets
-        - Filtra pedidos entregados (si corresponde)
+        - Filtra pedidos entregados
         - Limpia datos
-        - Calcula ubicación de warehouses y correlaciones económicas
+        - Calcula ubicación de warehouses (KMeans) y correlaciones económicas
         """
         print("Iniciando proceso ETL completo...")
 
         # === CARGA ===
         if not self.cleaner.load_all_datasets():
-            print("❌ Error cargando datasets.")
+            print("Error cargando datasets.")
             return False
 
-        print("✅ Todos los datasets cargados exitosamente")
 
-        # === FILTRADO (opcional si existe orders) ===
+        # === FILTRADO (solo pedidos entregados) ===
         self.cleaner.filter_delivered_orders()
 
         # === LIMPIEZA ===
-        print("Aplicando limpieza de datos...")
+        
         self.cleaner.clean_datasets()
-        print("✅ Limpieza completada")
+        
 
         # === INSTANCIAR CALCULADORA ===
         try:
@@ -53,20 +55,38 @@ class DataProcessor:
                 df_economic=self.cleaner.datasets["economic_indicators"],
             )
         except Exception as e:
-            print(f"❌ Error al instanciar MetricCalculator: {e}")
+            print(f"Error al instanciar MetricCalculator: {e}")
             return False
 
-        # === CÁLCULOS ===
+        # === CÁLCULOS PRINCIPALES ===
         print("Calculando ubicación del galpón y relación con datos económicos...")
+
         try:
+            # 1️ Calcular ubicación óptima de warehouses mediante clustering
+            allocator = WarehouseAllocator(
+                df_orders=self.cleaner.datasets["orders"],
+                df_customers=self.cleaner.datasets["customers"],
+                df_geolocation=self.cleaner.datasets["geolocation"],
+                df_items=self.cleaner.datasets["order_items"],
+                df_products=self.cleaner.datasets["products"],
+                n_clusters=27  # ajustable según nivel de granularidad
+            )
+            warehouses = allocator.estimate()
+
+            # 2️ Calcular métricas económicas y de performance
             results = self.calculator.calculate_all()
+
+            # 3️ Integrar resultados
+            results["warehouses"] = warehouses
+            results["timestamp"] = datetime.utcnow().isoformat()
             self.processed_results = results
-            print("✅ Cálculo económico-temporal completado.")
+
+            print("Cálculo económico-temporal completado.")
         except Exception as e:
-            print(f"❌ Error en el cálculo de métricas: {e}")
+            print(f"Error en el cálculo de métricas o ubicación: {e}")
             return False
 
-        print("✅ Proceso ETL completado exitosamente.")
+        print("Proceso ETL completado exitosamente.")
         return True
 
     # ================================================================

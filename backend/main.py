@@ -20,9 +20,9 @@ def main():
     processor = DataProcessor()  # No requiere cleaner como argumento
 
     if not processor.execute_etl():
-        print("❌ Error durante la fase ETL.")
+        print("Error durante la fase ETL.")
         return
-    print("✅ ETL completado exitosamente\n")
+    print("ETL completado exitosamente\n")
 
     # === FASE 2: CARGA EN MONGODB ===
     print("FASE 2: CARGA EN MONGODB")
@@ -36,7 +36,7 @@ def main():
     mongo_handler = MongoDBHandler(mongo_uri, mongo_db_name)
 
     if not mongo_handler.connect():
-        print("❌ Error al conectar con MongoDB.")
+        print("Error al conectar con MongoDB.")
         return
 
     print("Subiendo colecciones a MongoDB...")
@@ -48,11 +48,10 @@ def main():
         # Subir todas las colecciones procesadas
         for name, records in mongo_docs.items():
             mongo_handler.insert_many(name, records)
-            print(f"✅ Colección '{name}' cargada ({len(records)} documentos)")
 
-        print("✅ Datos cargados exitosamente en MongoDB\n")
+        print("Datos cargados exitosamente en MongoDB\n")
     except Exception as e:
-        print(f"❌ Error al cargar datos en MongoDB: {e}")
+        print(f"Error al cargar datos en MongoDB: {e}")
         return
 
     # === FASE 3: ANÁLISIS Y RESULTADOS ===
@@ -60,7 +59,7 @@ def main():
 
     results = processor.processed_results or {}
 
-    print("📦 Resultados procesados:")
+    print("Resultados procesados:")
     warehouses = results.get("warehouses")
     econ = results.get("economic_time_series", {}).get("econ_correlations_with_orders")
     metrics = results.get("metrics")
@@ -73,7 +72,7 @@ def main():
         print(f" - Métricas generales: {metrics}")
 
     print(f" - Fecha de procesamiento: {results.get('timestamp', None)}")
-    print("\n✅ Sistema ETL finalizado correctamente")
+    print("\nSistema ETL finalizado correctamente")
 
 
 if __name__ == "__main__":

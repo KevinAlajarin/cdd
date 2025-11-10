@@ -27,10 +27,10 @@ class DataProcessor:
 
         # === CARGA ===
         if not self.cleaner.load_all_datasets():
-            print("❌ Error cargando datasets.")
+            print("Error cargando datasets.")
             return False
 
-        print("✅ Todos los datasets cargados exitosamente")
+        print("Todos los datasets cargados exitosamente")
 
         # === FILTRADO ===
         self.cleaner.filter_delivered_orders()
@@ -38,7 +38,7 @@ class DataProcessor:
         # === LIMPIEZA ===
         print("Aplicando limpieza de datos...")
         self.cleaner.clean_datasets()
-        print("✅ Limpieza completada")
+        print("Limpieza completada")
 
         # === INSTANCIAR CALCULADORA ===
         try:
@@ -49,7 +49,7 @@ class DataProcessor:
                 df_economic=self.cleaner.datasets["economic_indicators"]
             )
         except Exception as e:
-            print(f"❌ Error al instanciar MetricCalculator: {e}")
+            print(f"Error al instanciar MetricCalculator: {e}")
             return False
 
         # === CÁLCULOS ===
@@ -57,12 +57,12 @@ class DataProcessor:
         try:
             results = self.calculator.calculate_all()
             self.processed_results = results
-            print("✅ Cálculo económico-temporal completado.")
+            print("Cálculo económico-temporal completado.")
         except Exception as e:
-            print(f"❌ Error en el cálculo de métricas: {e}")
+            print(f"Error en el cálculo de métricas: {e}")
             return False
 
-        print("✅ Proceso ETL completado exitosamente.")
+        print("Proceso ETL completado exitosamente.")
         return True
 
     def get_processed_data(self):

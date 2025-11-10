@@ -62,8 +62,6 @@ class MetricCalculator:
                 "lng": row["geolocation_lng"]
             })
 
-        print(f"📍 Estimando ubicaciones óptimas de warehouse...")
-        print(f"✅ {len(warehouses)} ubicaciones de warehouse estimadas.")
 
         return warehouses
 
@@ -83,8 +81,8 @@ class MetricCalculator:
             else:
                 correlations[col] = None
 
-        print("📈 Calculando relación económica-temporal...")
-        print(f"✅ Correlaciones calculadas: {correlations}")
+        print("Calculando relación económica-temporal...")
+        print(f"Correlaciones calculadas: {correlations}")
 
         return correlations
 

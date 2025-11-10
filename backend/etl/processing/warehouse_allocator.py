@@ -1,39 +1,72 @@
+# etl/processing/warehouse_allocator.py
 import pandas as pd
-import numpy as np
+from sklearn.cluster import KMeans
 
 class WarehouseAllocator:
-    def __init__(self, df_orders, df_customers, df_geolocation, df_items, df_products):
+    """
+    Asigna ubicaciones óptimas de warehouse usando clustering geográfico (K-Means)
+    basado en la densidad de pedidos y coordenadas de clientes.
+    """
+
+    def __init__(self, df_orders, df_customers, df_geolocation, df_items, df_products, n_clusters=27):
         self.df_orders = df_orders
         self.df_customers = df_customers
         self.df_geolocation = df_geolocation
         self.df_items = df_items
         self.df_products = df_products
+        self.n_clusters = n_clusters
 
     def estimate(self):
-        merged = self.df_orders.merge(self.df_customers, on='customer_id', how='left')
-        merged = merged.merge(self.df_geolocation, on='customer_zip_code_prefix', how='left')
-        merged = merged[merged['order_status'] == 'delivered']
+        print("Estimando ubicaciones óptimas de warehouse mediante clustering geográfico...")
 
-        summary = merged.groupby('customer_state').agg({
-            'order_id': 'count',
-            'geolocation_lat': 'mean',
-            'geolocation_lng': 'mean'
-        }).reset_index()
+        # === 1️ Validar y preparar columnas ===
+        df_cust = self.df_customers.copy()
+        df_geo = self.df_geolocation.copy()
 
-        summary.rename(columns={
-            'customer_state': 'state',
-            'order_id': 'orders_count',
-            'geolocation_lat': 'lat',
-            'geolocation_lng': 'lng'
-        }, inplace=True)
+        # Verificar si están las columnas esperadas
+        if "customer_zip_code_prefix" not in df_cust.columns:
+            # Buscar alternativas
+            zip_col = [c for c in df_cust.columns if "zip" in c][0]
+            df_cust = df_cust.rename(columns={zip_col: "customer_zip_code_prefix"})
 
-        summary['size'] = pd.qcut(summary['orders_count'], q=3, labels=['small', 'medium', 'large'])
-        summary['estimated_capacity_m3'] = summary['orders_count'] * 0.05
+        if "geolocation_zip_code_prefix" not in df_geo.columns:
+            zip_col = [c for c in df_geo.columns if "zip" in c][0]
+            df_geo = df_geo.rename(columns={zip_col: "geolocation_zip_code_prefix"})
 
-        top_items = self.df_items.groupby('product_id').size().reset_index(name='count')
-        top_items = top_items.sort_values('count', ascending=False).head(5)
-        top_products = self.df_products[self.df_products['product_id'].isin(top_items['product_id'])]
+        # === 2️ Vincular clientes con coordenadas ===
+        df_merge = pd.merge(
+            df_cust,
+            df_geo,
+            left_on="customer_zip_code_prefix",
+            right_on="geolocation_zip_code_prefix",
+            how="left"
+        )
 
-        summary['product_distribution'] = [top_products.to_dict(orient='records')] * len(summary)
+        # Filtrar coordenadas válidas
+        df_merge = df_merge.dropna(subset=["geolocation_lat", "geolocation_lng"])
 
-        return summary.to_dict(orient='records')
+        if df_merge.empty:
+            raise ValueError("No hay coordenadas válidas para clientes tras el merge geográfico.")
+
+        # === 3️ Aplicar clustering K-Means sobre coordenadas ===
+        coords = df_merge[["geolocation_lat", "geolocation_lng"]].values
+        kmeans = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
+        df_merge["cluster"] = kmeans.fit_predict(coords)
+
+        # === 4️ Calcular centroides y estadísticas ===
+        warehouses = []
+        for i in range(self.n_clusters):
+            cluster_points = df_merge[df_merge["cluster"] == i]
+            lat_mean = cluster_points["geolocation_lat"].mean()
+            lon_mean = cluster_points["geolocation_lng"].mean()
+            density = len(cluster_points)
+
+            warehouses.append({
+                "warehouse_id": i + 1,
+                "latitude": float(lat_mean),
+                "longitude": float(lon_mean),
+                "customer_count": int(density),
+            })
+
+        print(f"{len(warehouses)} ubicaciones de warehouse estimadas.")
+        return warehouses

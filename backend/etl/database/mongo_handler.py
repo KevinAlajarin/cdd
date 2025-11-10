@@ -18,10 +18,10 @@ class MongoDBHandler:
         try:
             self.client = MongoClient(self.uri)
             self.db = self.client[self.db_name]
-            print(f"✅ Conexión exitosa a MongoDB!")
+            print(f"Conexión exitosa a MongoDB!")
             return True
         except Exception as e:
-            print(f"❌ Error conectando a MongoDB: {e}")
+            print(f"Error conectando a MongoDB: {e}")
             return False
 
     def insert_many(self, collection_name, documents):
@@ -30,7 +30,7 @@ class MongoDBHandler:
         Si la colección ya existe, la reemplaza completamente.
         """
         if self.db is None:
-            raise Exception("⚠️ Base de datos no inicializada. Llamar a connect() primero.")
+            raise Exception("Base de datos no inicializada. Llamar a connect() primero.")
         
         try:
             collection = self.db[collection_name]
@@ -38,8 +38,8 @@ class MongoDBHandler:
                 collection.drop()  # Limpia antes de insertar
             if documents and len(documents) > 0:
                 collection.insert_many(documents)
-                print(f"✅ Colección '{collection_name}' cargada con {len(documents)} documentos.")
+                print(f"Colección '{collection_name}' cargada con {len(documents)} documentos.")
             else:
-                print(f"⚠️ No hay documentos para insertar en '{collection_name}'.")
+                print(f"No hay documentos para insertar en '{collection_name}'.")
         except Exception as e:
-            print(f"❌ Error insertando en {collection_name}: {e}")
+            print(f"Error insertando en {collection_name}: {e}")

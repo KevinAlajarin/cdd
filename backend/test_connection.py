@@ -8,10 +8,10 @@ def test_connection():
     
     db_handler = MongoDBHandler()
     if db_handler.connect():
-        print("✅ Conexión exitosa!")
+        print("Conexión exitosa!")
         db_handler.disconnect()
     else:
-        print("❌ Error de conexión")
+        print("Error de conexión")
 
 if __name__ == "__main__":
     test_connection()
