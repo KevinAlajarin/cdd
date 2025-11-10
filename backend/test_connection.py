@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def test_connection():
-    print("🧪 Probando conexión a MongoDB Atlas...")
+    print("Probando conexión a MongoDB Atlas...")
     
     db_handler = MongoDBHandler()
     if db_handler.connect():
