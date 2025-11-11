@@ -12,9 +12,8 @@ class MongoDBHandler:
         self.client = None
         self.db = None
 
-    # ============================================================
+
     # CONEXIÓN
-    # ============================================================
     def connect(self):
         """
         Conecta al cluster de MongoDB Atlas y selecciona la base de datos.
@@ -28,9 +27,9 @@ class MongoDBHandler:
             print(f"Error conectando a MongoDB: {e}")
             return False
 
-    # ============================================================
+
     # INSERCIÓN DE DATOS
-    # ============================================================
+
     def insert_many(self, collection_name, documents):
         """
         Inserta una lista de documentos en una colección.
@@ -50,7 +49,7 @@ class MongoDBHandler:
                 collection.insert_many(documents)
                 print(f"Colección '{collection_name}' cargada con {len(documents)} documentos.")
             else:
-                print(f"⚠️ No hay documentos para insertar en '{collection_name}'.")
+                print(f"No hay documentos para insertar en '{collection_name}'.")
 
         except Exception as e:
             print(f"Error insertando en {collection_name}: {e}")

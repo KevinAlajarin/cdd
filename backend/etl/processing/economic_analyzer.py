@@ -8,7 +8,7 @@ class EconomicAnalyzer:
         self.df_economic = df_economic
 
     def analyze(self):
-        # === 1️⃣ Preparar datasets ===
+        # 1️ Preparar datasets
         df_orders = self.df_orders.copy()
         df_econ = self.df_economic.copy()
 
@@ -21,7 +21,7 @@ class EconomicAnalyzer:
             df_econ["date"] = pd.to_datetime(df_econ["date"], errors="coerce")
             df_econ["year_month"] = df_econ["date"].dt.to_period("M").astype(str)
 
-        # === 2️⃣ Volumen mensual de pedidos ===
+        # 2️ Volumen mensual de pedidos
         monthly_orders = (
             df_orders.groupby("year_month")
             .size()
@@ -29,10 +29,10 @@ class EconomicAnalyzer:
             .sort_values("year_month")
         )
 
-        # === 3️⃣ Merge temporal con indicadores económicos ===
+        # 3️ Merge temporal con indicadores económicos
         joined = monthly_orders.merge(df_econ, on="year_month", how="left")
 
-        # === 4️⃣ Limpieza de datos nulos ===
+        # 4️ Limpieza de datos nulos
         # Opción 1: eliminar meses sin indicadores (más estricta)
         joined = joined.dropna(subset=["econ_act", "inflation", "interest_rate"], how="all")
 
@@ -40,10 +40,10 @@ class EconomicAnalyzer:
         joined = joined.sort_values("year_month")
         joined = joined.ffill().bfill()
 
-        # === 5️⃣ Calcular correlaciones ===
+        # 5️ Calcular correlaciones
         corr = joined.corr(numeric_only=True)["orders_count"].drop("orders_count", errors="ignore").to_dict()
 
-        # === 6️⃣ Tendencia del volumen mensual ===
+        # 6️ Tendencia del volumen mensual
         joined["month_index"] = np.arange(len(joined))
         if len(joined) > 1:
             slope, intercept = np.polyfit(joined["month_index"], joined["orders_count"], 1)
@@ -51,7 +51,7 @@ class EconomicAnalyzer:
         else:
             slope, trend = 0, "stable"
 
-        # === 7️⃣ Devolver resultados ===
+        # 7️ Devolver resultados
         return {
             "monthly_volumes": monthly_orders.to_dict(orient="records"),
             "joined_monthly": joined.to_dict(orient="records"),

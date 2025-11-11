@@ -25,22 +25,22 @@ class DataProcessor:
         """
         print("Iniciando proceso ETL completo...")
 
-        # === CARGA ===
+        # CARGA
         if not self.cleaner.load_all_datasets():
             print("Error cargando datasets.")
             return False
 
         print("Todos los datasets cargados exitosamente")
 
-        # === FILTRADO ===
+        # FILTRADO
         self.cleaner.filter_delivered_orders()
 
-        # === LIMPIEZA ===
+        # LIMPIEZA
         print("Aplicando limpieza de datos...")
         self.cleaner.clean_datasets()
         print("Limpieza completada")
 
-        # === INSTANCIAR CALCULADORA ===
+        # INSTANCIAR CALCULADORA
         try:
             self.calculator = MetricCalculator(
                 df_items=self.cleaner.datasets["order_items"],
@@ -52,7 +52,7 @@ class DataProcessor:
             print(f"Error al instanciar MetricCalculator: {e}")
             return False
 
-        # === CÁLCULOS ===
+        # CÁLCULOS
         print("Calculando ubicación del galpón y relación con datos económicos...")
         try:
             results = self.calculator.calculate_all()

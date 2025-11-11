@@ -55,7 +55,7 @@ class DataCleaner:
                 df.drop_duplicates(inplace=True)
                 df.dropna(how="all", inplace=True)
 
-                # 🔧 Convertir NaT en None para compatibilidad con MongoDB
+                # Convertir NaT en None para compatibilidad con MongoDB
                 for col in df.select_dtypes(include=["datetime64[ns]"]).columns:
                     df[col] = df[col].astype(str).replace("NaT", None)
 

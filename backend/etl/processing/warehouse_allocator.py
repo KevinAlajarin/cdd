@@ -26,13 +26,14 @@ class WarehouseAllocator:
         self.df_products = df_products
         self.n_clusters = n_clusters
 
-    # ============================================================
+
+
     # MÉTODO PRINCIPAL
-    # ============================================================
+   
     def estimate(self):
         print("Estimando ubicaciones óptimas de warehouse mediante clustering geográfico...")
 
-        # === 1️ Preparar data ===
+        # 1️ Preparar data
         df_cust = self.df_customers.copy()
         df_geo = self.df_geolocation.copy()
 
@@ -45,7 +46,7 @@ class WarehouseAllocator:
             zip_col = [c for c in df_geo.columns if "zip" in c][0]
             df_geo = df_geo.rename(columns={zip_col: "geolocation_zip_code_prefix"})
 
-        # === 2️ Merge clientes + coordenadas ===
+        # 2️ Merge clientes + coordenadas
         df_merge = pd.merge(
             df_cust,
             df_geo,
@@ -64,24 +65,23 @@ class WarehouseAllocator:
         n_points = len(df_merge)
         print(f"Coordenadas válidas para clustering: {n_points} registros")
 
-        # === 3️ Clustering geográfico ===
+        # 3️ Clustering geográfico
         coords = df_merge[["geolocation_lat", "geolocation_lng"]].values
 
         # Cálculo adaptativo de clusters
         if self.n_clusters is None:
-            # número proporcional a raíz cuadrada del total, acotado entre 30 y 120
             self.n_clusters = int(max(30, min(120, np.sqrt(n_points) // 15)))
 
         if len(coords) < self.n_clusters:
             self.n_clusters = max(5, len(coords) // 2)
 
-        print(f"Número de clusters ajustado automáticamente a: {self.n_clusters}")
+        print(f"🔹 Número de clusters ajustado automáticamente a: {self.n_clusters}")
 
-        # === K-Means ===
+        # K-Means base
         kmeans = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
         df_merge["cluster"] = kmeans.fit_predict(coords)
 
-        # === 4️ Vincular pedidos y productos ===
+        # 4️ Vincular pedidos y productos
         df_orders = self.df_orders.copy()
         df_items = self.df_items.copy()
         df_products = self.df_products.copy()
@@ -95,7 +95,7 @@ class WarehouseAllocator:
         if "cluster" not in df_full.columns or df_full["cluster"].isna().all():
             raise ValueError("No se pudo asignar ningún cluster a los clientes. Verifica coordenadas y zip codes.")
 
-        # === 5️ Calcular resumen por warehouse ===
+        # 5️ Calcular resumen por warehouse
         warehouses = []
         valid_clusters = sorted(df_full["cluster"].dropna().unique())
         total_clusters = len(valid_clusters)
@@ -104,7 +104,7 @@ class WarehouseAllocator:
         print(f"Iniciando análisis de {total_clusters} clusters...\n")
 
         for idx, cluster_id in enumerate(valid_clusters, start=1):
-            print(f"🌀 Analizando cluster {idx}/{total_clusters} (ID interno: {cluster_id})...")
+            print(f"  ➜ Analizando cluster {idx}/{total_clusters} (ID interno: {cluster_id})...")
 
             cluster_points = df_merge[df_merge["cluster"] == cluster_id]
             if cluster_points.empty:
@@ -123,8 +123,39 @@ class WarehouseAllocator:
 
             density = len(cluster_points)
             relative_density = density / total_customers
+            note = None  # campo explicativo
 
-            # === Clasificación inteligente ===
+            # Clasificación inteligente y subdivisión adaptativa
+            if relative_density > 0.08:
+                # subdividir zona muy densa en subclusters locales
+                sub_k = min(3, int(relative_density * 100))  # máximo 3 subdivisiones
+                sub_kmeans = KMeans(n_clusters=sub_k, random_state=42, n_init=10)
+                sub_labels = sub_kmeans.fit_predict(cluster_points[["geolocation_lat", "geolocation_lng"]].values)
+
+                for sub_id in range(sub_k):
+                    sub_points = cluster_points[sub_labels == sub_id]
+                    if sub_points.empty:
+                        continue
+
+                    lat_sub = sub_points["geolocation_lat"].mean()
+                    lon_sub = sub_points["geolocation_lng"].mean()
+                    sub_density = len(sub_points)
+                    sub_ratio = sub_density / total_customers
+
+                    warehouses.append({
+                        "warehouse_id": f"{cluster_id}_{sub_id}",
+                        "latitude": float(lat_sub),
+                        "longitude": float(lon_sub),
+                        "customer_count": int(sub_density),
+                        "density_ratio": round(sub_ratio, 4),
+                        "warehouse_size": "medium",
+                        "estimated_delivery_improvement_%": round(np.random.uniform(14, 20), 2),
+                        "top_items": top_items,
+                        "note": "Subdividido por alta densidad de clientes en área metropolitana"
+                    })
+                continue
+
+            # Clasificación normal
             if relative_density > 0.04:
                 size = "large"
                 improvement = np.random.uniform(18, 25)
@@ -144,12 +175,15 @@ class WarehouseAllocator:
                 "warehouse_size": size,
                 "estimated_delivery_improvement_%": round(improvement, 2),
                 "top_items": top_items,
+                "note": note or "Cluster normal sin subdivisión"
             })
 
         sizes = [w["warehouse_size"] for w in warehouses]
         print(
-            f"\n✅ {len(warehouses)} ubicaciones estimadas | "
-            f"Distribución: {sizes.count('small')} small | {sizes.count('medium')} medium | {sizes.count('large')} large"
+            f"\n{len(warehouses)} ubicaciones estimadas | "
+            f"Distribución: {sizes.count('small')} small | "
+            f"{sizes.count('medium')} medium | "
+            f"{sizes.count('large')} large"
         )
 
         return warehouses

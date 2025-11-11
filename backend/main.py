@@ -9,7 +9,7 @@ def main():
     print("INICIANDO SISTEMA ETL - ECOMMERCE BRAZIL")
     print("==================================================\n")
 
-    # === FASE 1: PROCESAMIENTO ETL ===
+    # FASE 1: PROCESAMIENTO ETL
     print("FASE 1: PROCESAMIENTO ETL")
     load_dotenv()
 
@@ -20,7 +20,7 @@ def main():
         return
     print("ETL completado exitosamente\n")
 
-    # === FASE 2: CARGA EN MONGODB ===
+    # FASE 2: CARGA EN MONGODB
     print("FASE 2: CARGA EN MONGODB")
 
     mongo_uri = os.getenv("MONGO_URI")
@@ -44,7 +44,7 @@ def main():
         print(f"Error al cargar datos en MongoDB: {e}")
         return
 
-    # === FASE 3: ANÁLISIS Y RESULTADOS ===
+    # FASE 3: ANÁLISIS Y RESULTADOS
     print("FASE 3: ANÁLISIS Y RESULTADOS")
     results = processor.processed_results or {}
 
