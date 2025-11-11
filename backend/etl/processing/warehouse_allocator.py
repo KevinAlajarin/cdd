@@ -30,9 +30,9 @@ class WarehouseAllocator:
     # MÉTODO PRINCIPAL
     # ============================================================
     def estimate(self):
-        print("📍 Estimando ubicaciones óptimas de warehouse mediante clustering geográfico...")
+        print("Estimando ubicaciones óptimas de warehouse mediante clustering geográfico...")
 
-        # === 1️⃣ Preparar data ===
+        # === 1️ Preparar data ===
         df_cust = self.df_customers.copy()
         df_geo = self.df_geolocation.copy()
 
@@ -45,7 +45,7 @@ class WarehouseAllocator:
             zip_col = [c for c in df_geo.columns if "zip" in c][0]
             df_geo = df_geo.rename(columns={zip_col: "geolocation_zip_code_prefix"})
 
-        # === 2️⃣ Merge clientes + coordenadas ===
+        # === 2️ Merge clientes + coordenadas ===
         df_merge = pd.merge(
             df_cust,
             df_geo,
@@ -62,12 +62,12 @@ class WarehouseAllocator:
             raise ValueError("No hay coordenadas válidas para clientes tras el merge geográfico.")
 
         n_points = len(df_merge)
-        print(f"📊 Coordenadas válidas para clustering: {n_points} registros")
+        print(f"Coordenadas válidas para clustering: {n_points} registros")
 
-        # === 3️⃣ Clustering geográfico ===
+        # === 3️ Clustering geográfico ===
         coords = df_merge[["geolocation_lat", "geolocation_lng"]].values
 
-        # 🔧 Cálculo adaptativo de clusters
+        #Cálculo adaptativo de clusters
         if self.n_clusters is None:
             # número proporcional a raíz cuadrada del total, acotado entre 30 y 120
             self.n_clusters = int(max(30, min(120, np.sqrt(n_points) // 15)))
@@ -75,13 +75,13 @@ class WarehouseAllocator:
         if len(coords) < self.n_clusters:
             self.n_clusters = max(5, len(coords) // 2)
 
-        print(f"🧠 Número de clusters ajustado automáticamente a: {self.n_clusters}")
+        print(f"Número de clusters ajustado automáticamente a: {self.n_clusters}")
 
         # === K-Means ===
         kmeans = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
         df_merge["cluster"] = kmeans.fit_predict(coords)
 
-        # === 4️⃣ Vincular pedidos y productos ===
+        # === 4️ Vincular pedidos y productos ===
         df_orders = self.df_orders.copy()
         df_items = self.df_items.copy()
         df_products = self.df_products.copy()
@@ -95,7 +95,7 @@ class WarehouseAllocator:
         if "cluster" not in df_full.columns or df_full["cluster"].isna().all():
             raise ValueError("No se pudo asignar ningún cluster a los clientes. Verifica coordenadas y zip codes.")
 
-        # === 5️⃣ Calcular resumen por warehouse ===
+        # === 5️ Calcular resumen por warehouse ===
         warehouses = []
         valid_clusters = df_full["cluster"].dropna().unique()
         total_customers = df_merge["customer_id"].nunique()
@@ -143,7 +143,7 @@ class WarehouseAllocator:
 
         sizes = [w["warehouse_size"] for w in warehouses]
         print(
-            f"✅ {len(warehouses)} ubicaciones estimadas | "
+            f"{len(warehouses)} ubicaciones estimadas | "
             f"Distribución: {sizes.count('small')} small | {sizes.count('medium')} medium | {sizes.count('large')} large"
         )
 
