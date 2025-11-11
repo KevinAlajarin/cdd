@@ -67,7 +67,7 @@ class WarehouseAllocator:
         # === 3️ Clustering geográfico ===
         coords = df_merge[["geolocation_lat", "geolocation_lng"]].values
 
-        #Cálculo adaptativo de clusters
+        # Cálculo adaptativo de clusters
         if self.n_clusters is None:
             # número proporcional a raíz cuadrada del total, acotado entre 30 y 120
             self.n_clusters = int(max(30, min(120, np.sqrt(n_points) // 15)))
@@ -97,10 +97,15 @@ class WarehouseAllocator:
 
         # === 5️ Calcular resumen por warehouse ===
         warehouses = []
-        valid_clusters = df_full["cluster"].dropna().unique()
+        valid_clusters = sorted(df_full["cluster"].dropna().unique())
+        total_clusters = len(valid_clusters)
         total_customers = df_merge["customer_id"].nunique()
 
-        for cluster_id in sorted(valid_clusters):
+        print(f"Iniciando análisis de {total_clusters} clusters...\n")
+
+        for idx, cluster_id in enumerate(valid_clusters, start=1):
+            print(f"🌀 Analizando cluster {idx}/{total_clusters} (ID interno: {cluster_id})...")
+
             cluster_points = df_merge[df_merge["cluster"] == cluster_id]
             if cluster_points.empty:
                 continue
@@ -143,7 +148,7 @@ class WarehouseAllocator:
 
         sizes = [w["warehouse_size"] for w in warehouses]
         print(
-            f"{len(warehouses)} ubicaciones estimadas | "
+            f"\n✅ {len(warehouses)} ubicaciones estimadas | "
             f"Distribución: {sizes.count('small')} small | {sizes.count('medium')} medium | {sizes.count('large')} large"
         )
 

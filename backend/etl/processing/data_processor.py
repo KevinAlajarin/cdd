@@ -98,6 +98,4 @@ class DataProcessor:
         mongo_docs = {name: df.to_dict("records") for name, df in datasets.items()}
         # push processed_results as a single document
         mongo_docs["processed_results"] = [self.processed_results]
-        # also create a separate warehouses collection for convenience
-        mongo_docs["warehouses"] = self.processed_results.get("warehouses", [])
         return mongo_docs
