@@ -7,46 +7,27 @@ from .warehouse_allocator import WarehouseAllocator
 
 class DataProcessor:
     """
-    Clase principal de orquestación del proceso ETL:
-    1. Carga y limpieza de datos
-    2. Ejecución de cálculos analíticos y estimaciones
-    3. Preparación de los resultados para MongoDB
+    Orquesta el proceso ETL completo:
+    - Carga, limpieza y filtrado de datos
+    - Cálculo de ubicaciones de warehouses y métricas económicas
+    - Preparación para MongoDB
     """
 
     def __init__(self, cleaner=None):
-        # Si no se pasa un cleaner, se crea uno nuevo
         self.cleaner = cleaner if cleaner else DataCleaner()
         self.calculator = None
         self.processed_results = {}
 
-    # ================================================================
-    # ETL PRINCIPAL
-    # ================================================================
     def execute_etl(self):
-        """
-        Ejecuta el pipeline ETL completo:
-        - Carga datasets
-        - Filtra pedidos entregados
-        - Limpia datos
-        - Calcula ubicación de warehouses (KMeans) y correlaciones económicas
-        """
         print("Iniciando proceso ETL completo...")
 
-        # === CARGA ===
         if not self.cleaner.load_all_datasets():
             print("Error cargando datasets.")
             return False
 
-
-        # === FILTRADO (solo pedidos entregados) ===
         self.cleaner.filter_delivered_orders()
-
-        # === LIMPIEZA ===
-        
         self.cleaner.clean_datasets()
-        
 
-        # === INSTANCIAR CALCULADORA ===
         try:
             self.calculator = MetricCalculator(
                 df_items=self.cleaner.datasets["order_items"],
@@ -58,57 +39,41 @@ class DataProcessor:
             print(f"Error al instanciar MetricCalculator: {e}")
             return False
 
-        # === CÁLCULOS PRINCIPALES ===
-        print("Calculando ubicación del galpón y relación con datos económicos...")
+        print("Calculando ubicación de galpones y relación económica...")
 
         try:
-            # 1️ Calcular ubicación óptima de warehouses mediante clustering
             allocator = WarehouseAllocator(
                 df_orders=self.cleaner.datasets["orders"],
                 df_customers=self.cleaner.datasets["customers"],
                 df_geolocation=self.cleaner.datasets["geolocation"],
                 df_items=self.cleaner.datasets["order_items"],
                 df_products=self.cleaner.datasets["products"],
-                n_clusters=27  # ajustable según nivel de granularidad
+                n_clusters=27
             )
-            warehouses = allocator.estimate()
 
-            # 2️ Calcular métricas económicas y de performance
+            warehouses = allocator.estimate()
             results = self.calculator.calculate_all()
 
-            # 3️ Integrar resultados
+            # Integrar warehouses con correlaciones económicas
             results["warehouses"] = warehouses
             results["timestamp"] = datetime.utcnow().isoformat()
-            self.processed_results = results
 
-            print("Cálculo económico-temporal completado.")
+            self.processed_results = results
+            print("Proceso ETL completado correctamente.")
+            return True
+
         except Exception as e:
             print(f"Error en el cálculo de métricas o ubicación: {e}")
             return False
 
-        print("Proceso ETL completado exitosamente.")
-        return True
-
-    # ================================================================
-    # ACCESORIOS
-    # ================================================================
     def get_processed_data(self):
-        """
-        Retorna los datasets originales + resultados procesados.
-        """
         return {
             "datasets_originales": self.cleaner.get_all_datasets(),
             "processed_results": self.processed_results,
         }
 
     def prepare_mongodb_documents(self):
-        """
-        Prepara documentos para carga en MongoDB.
-        Convierte los DataFrames en listas de diccionarios (records).
-        """
         datasets = self.cleaner.get_all_datasets()
         mongo_docs = {name: df.to_dict("records") for name, df in datasets.items()}
-
-        # Agrega los resultados del procesamiento analítico
         mongo_docs["processed_results"] = [self.processed_results]
         return mongo_docs
