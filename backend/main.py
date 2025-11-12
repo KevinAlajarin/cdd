@@ -23,8 +23,8 @@ def main():
     # FASE 2: CARGA EN MONGODB
     print("FASE 2: CARGA EN MONGODB")
 
-    mongo_uri = os.getenv("MONGO_URI")
-    mongo_db_name = os.getenv("MONGO_DB", "ecommerce_brazil")
+    mongo_uri = os.getenv("MONGODB_URI")
+    mongo_db_name = os.getenv("MONGODB_DATABASE", "ecommerce_brazil")
 
     mongo_handler = MongoDBHandler(mongo_uri, mongo_db_name)
 
